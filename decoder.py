@@ -5,10 +5,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from util import broadcast_dot
 from alphabet import AsciiEmbeddedEncoding, BytePairEncoding
-from contextual_lstm import ContextualLSTMCell
-from cnn_set_embedding import CNNSetEmbedding
 from context import *
 
 class AutoCompleteDecoderModel(nn.Module):
