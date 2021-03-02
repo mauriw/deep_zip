@@ -2,7 +2,8 @@ import decompressor
 import dataloader
 import numpy as np
 
-from transformers import BertTokenizer, BertForMaskedLM
+# from transformers import BertTokenizer, BertForMaskedLM
+from .mask import write_all
 
 COMPRESSION_FACTOR = 0.1
 
