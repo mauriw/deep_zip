@@ -1,6 +1,7 @@
 import decompressor
 
-from transformers import BertTokenizer, BertForMaskedLM
+# from transformers import BertTokenizer, BertForMaskedLM
+from .mask import write_all
 
 if __name__ == '__main__':
     tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
