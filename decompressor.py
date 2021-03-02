@@ -1,9 +1,11 @@
+import constants
 import torch
 
 MASK_CHAR = '[MASK]'
 
 def decompress(masked_txt, model, tokenizer):
     inputs = tokenizer(masked_txt, return_tensors='pt')
+    inputs.to(constants.DEVICE)
     # This is to ensure that we only predict on [MASK] tokens later
     tokens = tokenizer.convert_ids_to_tokens(inputs['input_ids'][0])
     outputs = model(**inputs)
