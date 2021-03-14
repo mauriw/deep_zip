@@ -1,4 +1,5 @@
 import constants
+import numpy as np
 from collections import Counter, defaultdict
 import pickle as pkl
 import plotly.figure_factory as ff
@@ -6,6 +7,7 @@ import plotly.express as px
 from tf_idf_script import output_idf
 from utils import get_data
 import os
+from tqdm import tqdm
 
 """
 Compress input txt string, window_size to select longest word and mask it.
@@ -43,23 +45,23 @@ def preprocess_poesia(dataset, vocab_size=100):
 """
 pre-processing for TF-IDF
 """
-def preprocess_tf_idf(dataset, vocab_size=100, factor_length=True): # tune threshold
+def preprocess_tf_idf(dataset, vocab_size=10000, threshold=0.1, factor_length=True): # tune threshold
 
-    # utilize TF (not doing so currently)
-    # toks = text.split() # consider using BERT tokenizer (and just not tokenize punct)
-    # TF = Counter(toks)
-    # scores = {}
-    # for i, tok in enumerate(toks):
-    #     score = TF[tok] * (IDF[tok] + 0.1)
-    #     if factor_length: score = score * len(tok)
-    #     # if score > threshold: # idf
-    #         # toks[i] = constants.MASK
-    #     scores[tok] = score
-
-    # utilize IDF
+    # calc TF-IDF
     IDF = get_idf()
-    idf_pairs = [(word, count) for word, count in IDF.items() if type(word) is not tuple and  len(word) != 1]
-    top_compressions = sorted(idf_pairs, key=lambda x: x[1], reverse=True)[:vocab_size] #[-vocab_size:]
+    TF = Counter()
+    scores= {}
+    for text in dataset:
+        toks = text.split()
+        TF = Counter(toks)
+        for i, tok in enumerate(toks):
+            score = float(1)/TF[tok] * float(1)/(IDF[tok]+0.01) * len(tok)
+            if factor_length: score = score * len(tok)
+            if tok in scores: score = min(score, scores[tok])
+            scores[tok] = score
+
+    tfidf_pairs = [(word, count) for word, count in scores.items() if  len(word) != 1]
+    top_compressions = sorted(tfidf_pairs, key=lambda x: x[1], reverse=True)[-vocab_size:]# [:vocab_size] #[-vocab_size:]
     compression_words = {word for word, _ in top_compressions}
     return sorted(compression_words)
 
@@ -84,20 +86,52 @@ next steps: integrate TF+len robustly
 """
 def test():
     ds = get_data()
-    comp_toks = preprocess_tf_idf(ds[5])
-    masked = []
+    comp_toks = preprocess_tf_idf(ds,vocab_size=10000)
+    # comp_toks = preprocess_poesia(ds,vocab_size=10000)
+
+    zero = 0
+    lots = 0
     dist = []
+    lens = []
+    pbar = tqdm(total=len(ds))
     for i,d in enumerate(ds):
+        # if len(lens) == 20: break
         toks = d.split()
+        if len(toks) == 0 or (toks[0] is "=" and toks[1] is "="):
+            pbar.update(1)
+            continue
+
+        lens.append(len(toks))
         comp = [word if word not in comp_toks else constants.MASK for word in toks]
-        masked.append(comp)
-        dist.append(len([word for word in comp if word is constants.MASK]))
-        if i == 10: break
+        n_masked = len([word for word in comp if word is constants.MASK])
+        dist.append(n_masked/float(len(d)))
+        if n_masked == 0: zero += 1
+        if n_masked >= round(len(toks)*0.8): lots += 1
+        if len(lens) == 6:
+            print("Sample Output: \n")
+            print(comp)
+        pbar.update(1)
+
+
+    print("AVG SAMPLE LEN: ", np.mean(lens))
+    print("AVG COMP SIZE: ", np.mean(dist))
+    print("MAX COMP SIZE: ", max(dist))
+    print("MIN COMP SIZE: ", min(dist))
+    print("Generated ", zero, " compressions with no mask tokens.")
+    print("Generated ", lots, " compressions where 80% or more of the tokens were compressed")
 
     df = px.data.tips()
-
-    fig = px.histogram(dist)
+    fig = px.histogram(dist, nbins=100)
     fig.show()
+
+    print("DS TYPE", type(ds))
+
+def data_analysis():
+    ds = get_data()
+    dist = Counter()
+    for d in ds:
+        dist += Counter(d)
+
 
 
 if __name__ == "__main__":
