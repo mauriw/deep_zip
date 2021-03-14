@@ -1,7 +1,7 @@
 import constants
 import datasets
 from torch.utils.data import DataLoader, Dataset
-from compressor import preprocess_tf_idf
+from compressor import preprocess_tf_idf, preprocess_poesia
 
 
 """
@@ -10,21 +10,33 @@ Compression dataset generates compression/original text pairs
 from the wikitext HuggingFace dataset
 """
 class CompressedDataset(Dataset):
-    def __init__(self, idf=True):
-        self.dataset = datasets.load_dataset('wikitext', \
+    def __init__(self, idf=True, vocab_size=10000, split="val"):
+        self.vocab_size = vocab_size
+
+        # get datasplits
+        ds = datasets.load_dataset('wikitext', \
                                 'wikitext-2-v1')['train']['text']
+        n_train = round(constants.TRAIN * len(ds)) # used for preprocess
+        self.train_ds = ds[:n_train]
+        n_val = round(constants.VAL * len(ds))
+        self.dataset = ds[n_train:n_train+n_val] if split is "val" else \
+                            ds[n_train+n_val:]
 
         # preprocessing for compressor
         if idf:
-            self.compression_words = preprocess_tf_idf()
+            self.compression_words = preprocess_tf_idf(self.train_ds, vocab_size)
         else:
-            self.compression_words = None # TODO: add Gabriel's
+            self.compression_words = preprocess_poesia(self.train_ds, vocab_size)
+            print("HEY",len(self.compression_words))
 
     def compress(self, text):
         toks = text.split()
         comp = [word if word not in self.compression_words else \
                         constants.MASK for word in toks]
         return ' '.join(comp)
+
+    def prediction_size(self):
+        return self.vocab_size
 
     def __len__(self):
         return len(self.dataset)

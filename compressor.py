@@ -24,25 +24,21 @@ def compress(txt, window_size=10):
         masked += window
     return ' '.join(masked)
 
-def global_compress(txt, num_words=100):
-    # returns:
-    #   - masked txt (string)
-    #   - list of compression words in alphabetical order (list of strings)
-    split_txt = txt.split()
-    word2count = Counter(split_txt)
-    total_chars = [(word, count * len(word)) for word, count in word2count.items()]
-    top_compressions = sorted(total_chars, key=lambda x: x[1], reverse=True)[:num_words]
-    compression_words = {word for word, _ in top_compressions}
-    masked = [word if word not in compression_words else constants.MASK for word in split_txt ]
-    return ' '.join(masked), sorted(compression_words)
-    
-
+def preprocess_poesia(dataset, vocab_size=10000):
+    total_chars = []
+    for txt in dataset:
+        if not len(txt): continue
+        split_txt = txt.split()
+        word2count = Counter(split_txt)
+        total_chars.extend([(word, count * len(word)) for word, count in word2count.items()])
+    top_compressions = sorted(total_chars, key=lambda x: x[1], reverse=True)[:vocab_size]
+    return sorted({word for word, _ in top_compressions})
 
 
 """
 pre-processing for TF-IDF
 """
-def preprocess_tf_idf(text=None, threshold=10000, factor_length=True): # tune threshold
+def preprocess_tf_idf(dataset, vocab_size=10000, factor_length=True): # tune threshold
 
     # utilize TF (not doing so currently)
     # toks = text.split() # consider using BERT tokenizer (and just not tokenize punct)
@@ -58,9 +54,8 @@ def preprocess_tf_idf(text=None, threshold=10000, factor_length=True): # tune th
     # utilize IDF
     IDF = get_idf()
     idf_pairs = [(word, count) for word, count in IDF.items() if type(word) is not tuple and  len(word) != 1]
-    top_compressions = sorted(idf_pairs, key=lambda x: x[1], reverse=True)[:threshold]
+    top_compressions = sorted(idf_pairs, key=lambda x: x[1], reverse=True)[:vocab_size] #[-vocab_size:]
     compression_words = {word for word, _ in top_compressions}
-
     return sorted(compression_words)
 
 """
