@@ -18,5 +18,5 @@ def global_compress(txt, num_words=100):
     top_compressions = sorted(total_chars, key=lambda x: x[1], reverse=True)[:num_words]
     compression_words = {word for word, _ in top_compressions}
     masked = [word if word not in compression_words else constants.MASK for word in split_txt ]
-    return ' '.join(masked), compression_words
+    return ' '.join(masked), list(compression_words)
     
