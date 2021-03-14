@@ -27,7 +27,6 @@ class CompressedDataset(Dataset):
             self.compression_words = preprocess_tf_idf(self.train_ds, vocab_size)
         else:
             self.compression_words = preprocess_poesia(self.train_ds, vocab_size)
-            print("HEY",len(self.compression_words))
 
     def compress(self, text):
         toks = text.split()
