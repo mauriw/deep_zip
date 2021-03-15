@@ -68,7 +68,7 @@ def run_experiment(model, tokenizer):
     print(f"Corpus size: {total_original_len} characters, {num_overall} words")
 
 base_training_args = {
-    'epochs': 1,
+    'epochs': 2,
     'loss_fn': F.cross_entropy,
     'lr': 1e-3,
     'weight_decay': 'TODO'
@@ -78,8 +78,6 @@ if __name__ == '__main__':
     encoder = BertModel.from_pretrained('bert-base-cased')
     # TODO check if you can change tokenizer mask token
     tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
-    print(tokenizer.mask_token)
-    print(tokenizer.mask_token_id)
 
     model = models.BertFinetune(encoder, constants.PRETRAINED_BERT_OUTPUT_HIDDEN_SIZE, tokenizer.vocab_size)
     training_args = copy.deepcopy(base_training_args)
@@ -87,6 +85,6 @@ if __name__ == '__main__':
         'optimizer': torch.optim.Adam(model.parameters(), training_args['lr'])
     })
 
-    dataloader = data.get_dataloader(tokenizer, False, shuffle=True, batch_size=3)
+    dataloader = data.get_dataloader(tokenizer, False, shuffle=True, batch_size=32)
 
     models.train(model, tokenizer, dataloader, training_args)

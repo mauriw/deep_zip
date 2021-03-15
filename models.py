@@ -9,17 +9,18 @@ class BertFinetune(torch.nn.Module):
         super(BertFinetune, self).__init__()
         self.encoder = encoder
         self.encoder.requires_grad_(False)
-        self.encoder.to(constants.DEVICE)
         self.output_vocab_size = output_vocab_size
 
         # Module vars
         # TODO see what difference bias makes
         self.lin = torch.nn.Linear(lm_output_size, output_vocab_size, bias=False)
 
+        self.to(constants.DEVICE)
+
+    # returns logits
     def forward(self, inputs):
         output_hidden_state = self.encoder(**inputs).last_hidden_state
-        x = self.lin(output_hidden_state)
-        return F.softmax(x, -1)
+        return self.lin(output_hidden_state)
 
 def train(model, tokenizer, dataloader, training_args):
     optimizer = training_args['optimizer']

@@ -48,13 +48,13 @@ class CompressedDataset(Dataset):
         compression = self.tokenizer(self.preprocess(self.dataset[index]), padding='max_length',
                                      max_length=constants.PRETRAINED_BERT_MAX_LEN, return_tensors='pt',
                                      truncation=True)
-        text = compression['input_ids'].clone().squeeze()
+        text = compression['input_ids'].clone().squeeze().to(constants.DEVICE)
         for i in range(compression['input_ids'].shape[-1]):
             if compression['input_ids'][0, i].item() in self.compression_indices:
                 compression['input_ids'][0, i] = self.tokenizer.mask_token_id
-        compression['input_ids'] = compression['input_ids'].squeeze()
-        compression['token_type_ids'] = compression['token_type_ids'].squeeze()
-        compression['attention_mask'] = compression['attention_mask'].squeeze()
+        compression['input_ids'] = compression['input_ids'].squeeze().to(constants.DEVICE)
+        compression['token_type_ids'] = compression['token_type_ids'].squeeze().to(constants.DEVICE)
+        compression['attention_mask'] = compression['attention_mask'].squeeze().to(constants.DEVICE)
         return compression, text
 
 """
