@@ -37,14 +37,12 @@ class CompressedDataset(Dataset):
     def __getitem__(self, index : int):
         """
         Function called by Torch to get an element.
-        At the moment, empty strings are not filter out (TODO)
         Args:
             index: index of elem to retrieve
         """
         text = self.dataset[index]
         compression = self.compress(text)
         return compression, text
-
 
 """
 Returns cleaned dataset
