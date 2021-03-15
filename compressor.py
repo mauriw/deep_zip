@@ -8,6 +8,7 @@ from tf_idf_script import output_idf
 from utils import get_data
 import os
 from tqdm import tqdm
+import pandas as pd
 
 """
 Compress input txt string, window_size to select longest word and mask it.
@@ -130,9 +131,20 @@ def data_analysis():
     ds = get_data()
     dist = Counter()
     for d in ds:
-        dist += Counter(d)
 
+        dist += Counter(d.split())
+
+    # s = raw['FuncGroup'].value_counts() ## Counts the occurrence of unqiue elements and stores in a variable called "s" which is series type
+    new = pd.DataFrame({'Word':list(dist.keys()), 'Count':list(dist.values())})  ## Converting series type to pandas df as plotly accepts dataframe as input. The two columns of df is FuncGroup which is being made by index of series and new variable called count which is made by values of series s.
+    new = new[new["Count"] > 1000]
+    new.sort_values(by = "Count", ascending=False)
+    print("LEN: ",len(new))
+    fig = px.bar(new,
+             y=new["Count"],
+             x="Word")
+             # color='Decision')
+    fig.show()
 
 
 if __name__ == "__main__":
-    test()
+    data_analysis()
