@@ -22,11 +22,16 @@ class CompressedDataset(Dataset):
         else:
             self.compression_words = preprocess_poesia(self.dataset, vocab_size)
 
+        self.compression_indices = self.tokenizer.convert_tokens_to_ids(self.compression_words)
+
+    def preprocess(self, text):
+        return text.strip().replace('<unk>', '[UNK]')
+
     def compress(self, text):
-        toks = text.split()
-        comp = [word if word not in self.compression_words else \
-                        constants.MASK for word in toks]
-        return ' '.join(comp)
+        toks = self.tokenizer.tokenize(text)
+        comp = [constants.MASK if word in self.compression_words else \
+                word for word in toks]
+        return self.tokenizer.decode(self.tokenizer.convert_tokens_to_ids(comp))
 
     def prediction_size(self):
         return self.vocab_size
@@ -40,8 +45,16 @@ class CompressedDataset(Dataset):
         Args:
             index: index of elem to retrieve
         """
-        text = self.dataset[index]
-        compression = self.compress(text)
+        compression = self.tokenizer(self.preprocess(self.dataset[index]), padding='max_length',
+                                     max_length=constants.PRETRAINED_BERT_MAX_LEN, return_tensors='pt',
+                                     truncation=True)
+        text = compression['input_ids'].clone().squeeze()
+        for i in range(compression['input_ids'].shape[-1]):
+            if compression['input_ids'][0, i].item() in self.compression_indices:
+                compression['input_ids'][0, i] = self.tokenizer.mask_token_id
+        compression['input_ids'] = compression['input_ids'].squeeze()
+        compression['token_type_ids'] = compression['token_type_ids'].squeeze()
+        compression['attention_mask'] = compression['attention_mask'].squeeze()
         return compression, text
 
 """
@@ -86,8 +99,8 @@ Arguments:
     compressor: bool, True if using TF-IDF (only IDF atm)
     kwargs: configurations for the torch DataLoader class
 """
-def get_dataloader(compressor, **kwargs):
-    dataset = CompressedDataset(compressor)
+def get_dataloader(tokenizer, compressor, **kwargs):
+    dataset = CompressedDataset(tokenizer, compressor)
     return DataLoader(dataset, **kwargs)
 
 """

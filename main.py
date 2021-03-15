@@ -1,8 +1,8 @@
 import compressor
 import constants
 import copy
+import data
 import decompressor
-import dataloader
 import models
 import numpy as np
 import torch
@@ -68,7 +68,7 @@ def run_experiment(model, tokenizer):
     print(f"Corpus size: {total_original_len} characters, {num_overall} words")
 
 base_training_args = {
-    'epochs': 100,
+    'epochs': 1,
     'loss_fn': F.cross_entropy,
     'lr': 1e-3,
     'weight_decay': 'TODO'
@@ -86,7 +86,7 @@ if __name__ == '__main__':
     training_args.update({
         'optimizer': torch.optim.Adam(model.parameters(), training_args['lr'])
     })
-    masked_txt = ["Hello [MASK] this is a test", "Trying this [MASK] to see what happens"]
-    true_txt = ["Hello there this is a test", "Trying this out to see what happens"]
 
-    models.train(model, tokenizer, training_args, masked_txt, true_txt)
+    dataloader = data.get_dataloader(tokenizer, False, shuffle=True, batch_size=3)
+
+    models.train(model, tokenizer, dataloader, training_args)
