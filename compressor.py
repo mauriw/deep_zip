@@ -24,13 +24,18 @@ def compress(txt, window_size=10):
         masked += window
     return ' '.join(masked)
 
+
+"""
+Return list of words that have the greatest frequency * length
+
+Arguments:
+    dataset: list of strings
+    vocab_size: int, length of list
+"""
 def preprocess_poesia(dataset, vocab_size=10000):
-    total_chars = []
-    for txt in dataset:
-        if not len(txt): continue
-        split_txt = txt.split()
-        word2count = Counter(split_txt)
-        total_chars.extend([(word, count * len(word)) for word, count in word2count.items()])
+    split_txt = ' '.join(dataset).split()
+    word2count = Counter(split_txt)
+    total_chars = [(word, count * len(word)) for word, count in word2count.items()]
     top_compressions = sorted(total_chars, key=lambda x: x[1], reverse=True)[:vocab_size]
     return sorted({word for word, _ in top_compressions})
 

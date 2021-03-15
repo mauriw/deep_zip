@@ -1,4 +1,6 @@
 import datasets
+from collections import Counter
+import constants
 
 """
 Returns raw wikitext train input
@@ -8,7 +10,10 @@ def get_data():
     dataset = datasets.load_dataset('wikitext', 'wikitext-2-v1')
     return dataset['train']['text']
 
-
+def unique_words(ds):
+    uniq = {w for txt in ds for w in txt.split()}
+    print("Unique words:", len(uniq))
+    return sorted(uniq)
 
 # original global compress
 def global_compress(txt, num_words=100):
