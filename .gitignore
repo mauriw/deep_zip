@@ -2,3 +2,5 @@ __pycache__
 out.txt
 err.txt
 inv_doc_freq*
+*.p
+.vscode

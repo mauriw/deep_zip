@@ -2,7 +2,8 @@ import constants
 import datasets
 from torch.utils.data import DataLoader, Dataset
 from compressor import preprocess_tf_idf, preprocess_poesia
-
+import pickle as pkl
+from pathlib import Path
 
 """
 Class Defintion:
@@ -10,23 +11,16 @@ Compression dataset generates compression/original text pairs
 from the wikitext HuggingFace dataset
 """
 class CompressedDataset(Dataset):
-    def __init__(self, idf=True, vocab_size=10000, split="val"):
+    def __init__(self, idf=True, vocab_size=10000, split="train", compression_words=None):
         self.vocab_size = vocab_size
-
-        # get datasplits
-        ds = datasets.load_dataset('wikitext', \
-                                'wikitext-2-v1')['train']['text']
-        n_train = round(constants.TRAIN * len(ds)) # used for preprocess
-        self.train_ds = ds[:n_train]
-        n_val = round(constants.VAL * len(ds))
-        self.dataset = ds[n_train:n_train+n_val] if split is "val" else \
-                            ds[n_train+n_val:]
-
-        # preprocessing for compressor
+        self.dataset = get_dataset(split)
+        
+        if compression_words:
+            self.compression_words = compression_words
         if idf:
-            self.compression_words = preprocess_tf_idf(self.train_ds, vocab_size)
+            self.compression_words = preprocess_tf_idf(self.dataset, vocab_size)
         else:
-            self.compression_words = preprocess_poesia(self.train_ds, vocab_size)
+            self.compression_words = preprocess_poesia(self.dataset, vocab_size)
 
     def compress(self, text):
         toks = text.split()
@@ -51,6 +45,40 @@ class CompressedDataset(Dataset):
         compression = self.compress(text)
         return compression, text
 
+
+"""
+Returns cleaned dataset
+
+Arguments:
+    split: string, "train", "val", or "test"
+"""
+def get_dataset(split):
+    assert split == 'train' or split == 'val' or split == 'test'
+    split = 'validation' if split == 'val' else split
+    filename = Path.cwd() / ('wikitext2_clean_' + split + '.p')
+    if filename.exists():
+        with open(filename, 'rb') as f:
+            return pkl.load(f)
+    
+    ds = datasets.load_dataset('wikitext', 'wikitext-2-v1')[split]['text']
+    clean = []
+    for d in ds:
+        if not d: 
+            continue
+        if d.startswith(' ='):
+            continue
+        if len(d.split()) < 10:
+            continue
+        d = d.replace('<unk>', '[UNK]')
+        d = d.replace(' @-@ ', '-')
+        d = d.replace(' @,@ ', ',')
+        d = d.replace(' @.@ ', '.')
+        clean.append(d)
+    
+    print('Writing cleaned dataset to', filename.name)
+    with open(filename, 'wb') as f:
+        x = pkl.dump(clean, f)     
+    return clean
 
 """
 Returns torch dataloader that for a dataset that
