@@ -9,10 +9,7 @@ import torch
 import torch.nn.functional as F
 
 from tqdm import tqdm
-# from transformers import BertTokenizer, BertForMaskedLM
-from transformers import BertTokenizer, BertModel
-
-# Return num_correct_masks, num_total_masks, num_correct, num_total
+from transformers import BertModel, BertTokenizer
 
 """
 Calculates the acc of text decompression (correctly un-masked), returns number
@@ -68,23 +65,30 @@ def run_experiment(model, tokenizer):
     print(f"Corpus size: {total_original_len} characters, {num_overall} words")
 
 base_training_args = {
-    'epochs': 2,
+    'epochs': 30,
+    'batch_size': 2,
+    'shuffle': True,
+    'optimizer': torch.optim.Adam,
     'loss_fn': F.cross_entropy,
-    'lr': 1e-3,
-    'weight_decay': 'TODO'
+    'lr': 1e-3
 }
 
 if __name__ == '__main__':
+    output_vocab_size = 1000
     encoder = BertModel.from_pretrained('bert-base-cased')
     # TODO check if you can change tokenizer mask token
     tokenizer = BertTokenizer.from_pretrained('bert-base-cased')
+    compression_tokens = compressor.preprocess_poesia(data.get_dataset('train'), output_vocab_size)
+    tokenizer.add_tokens(compression_tokens)
+    compression_ids = torch.tensor(tokenizer.convert_tokens_to_ids(compression_tokens))
+    compression_id_to_idx = {t.item(): i for i, t in enumerate(compression_ids)}
 
-    model = models.BertFinetune(encoder, constants.PRETRAINED_BERT_OUTPUT_HIDDEN_SIZE, tokenizer.vocab_size)
-    training_args = copy.deepcopy(base_training_args)
-    training_args.update({
-        'optimizer': torch.optim.Adam(model.parameters(), training_args['lr'])
-    })
+    print("Compression tokens:")
+    print(compression_tokens)
 
-    dataloader = data.get_dataloader(tokenizer, False, shuffle=True, batch_size=32)
+    model = models.BertFinetune(encoder, constants.PRETRAINED_BERT_OUTPUT_HIDDEN_SIZE, len(compression_tokens))
+    # TODO remove limit once working
+    dataset = data.CompressedDataset(data.get_dataset('train')[:10], tokenizer, compression_ids, compression_id_to_idx)
+    dataloader = torch.utils.data.DataLoader(dataset, shuffle=base_training_args['shuffle'], batch_size=base_training_args['batch_size'])
 
-    models.train(model, tokenizer, dataloader, training_args)
+    models.train(model, tokenizer, dataloader, compression_ids, base_training_args)

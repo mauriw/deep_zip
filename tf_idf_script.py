@@ -106,6 +106,7 @@ def tf_idf():
     output_idf(N_DOC, GRAMS)
 
 if __name__ == '__main__':
+    nltk.download('punkt')
     tf_idf()
 
 # e.g. code to open produced file

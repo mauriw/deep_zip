@@ -11,30 +11,11 @@ Compression dataset generates compression/original text pairs
 from the wikitext HuggingFace dataset
 """
 class CompressedDataset(Dataset):
-    def __init__(self, idf=True, vocab_size=10000, split="train", compression_words=None):
-        self.vocab_size = vocab_size
-        self.dataset = get_dataset(split)
-        
-        if compression_words:
-            self.compression_words = compression_words
-        if idf:
-            self.compression_words = preprocess_tf_idf(self.dataset, vocab_size)
-        else:
-            self.compression_words = preprocess_poesia(self.dataset, vocab_size)
-
-        self.compression_indices = self.tokenizer.convert_tokens_to_ids(self.compression_words)
-
-    def preprocess(self, text):
-        return text.strip().replace('<unk>', '[UNK]')
-
-    def compress(self, text):
-        toks = self.tokenizer.tokenize(text)
-        comp = [constants.MASK if word in self.compression_words else \
-                word for word in toks]
-        return self.tokenizer.decode(self.tokenizer.convert_tokens_to_ids(comp))
-
-    def prediction_size(self):
-        return self.vocab_size
+    def __init__(self, dataset, tokenizer, compression_ids, compression_id_to_idx):
+        self.dataset = dataset
+        self.tokenizer = tokenizer
+        self.compression_ids = compression_ids
+        self.compression_id_to_idx = compression_id_to_idx
 
     def __len__(self):
         return len(self.dataset)
@@ -45,17 +26,19 @@ class CompressedDataset(Dataset):
         Args:
             index: index of elem to retrieve
         """
-        compression = self.tokenizer(self.preprocess(self.dataset[index]), padding='max_length',
+        compression = self.tokenizer(self.dataset[index], padding='max_length',
                                      max_length=constants.PRETRAINED_BERT_MAX_LEN, return_tensors='pt',
                                      truncation=True)
-        text = compression['input_ids'].clone().squeeze().to(constants.DEVICE)
+        true_tokens = compression['input_ids'].clone().squeeze().to(constants.DEVICE)
         for i in range(compression['input_ids'].shape[-1]):
-            if compression['input_ids'][0, i].item() in self.compression_indices:
+            if compression['input_ids'][0, i].item() in self.compression_ids:
+                true_tokens[i] = self.compression_id_to_idx[compression['input_ids'][0, i].item()]
                 compression['input_ids'][0, i] = self.tokenizer.mask_token_id
         compression['input_ids'] = compression['input_ids'].squeeze().to(constants.DEVICE)
         compression['token_type_ids'] = compression['token_type_ids'].squeeze().to(constants.DEVICE)
         compression['attention_mask'] = compression['attention_mask'].squeeze().to(constants.DEVICE)
-        return compression, text
+        mask_indices = compression['input_ids'] == self.tokenizer.mask_token_id
+        return compression, true_tokens, mask_indices
 
 """
 Returns cleaned dataset
@@ -91,37 +74,37 @@ def get_dataset(split):
         x = pkl.dump(clean, f)     
     return clean
 
-"""
-Returns torch dataloader that for a dataset that
-utilizes the specified compressor.
+# """
+# Returns torch dataloader that for a dataset that
+# utilizes the specified compressor.
 
-Arguments:
-    compressor: bool, True if using TF-IDF (only IDF atm)
-    kwargs: configurations for the torch DataLoader class
-"""
-def get_dataloader(tokenizer, compressor, **kwargs):
-    dataset = CompressedDataset(tokenizer, compressor)
-    return DataLoader(dataset, **kwargs)
+# Arguments:
+#     compressor: bool, True if using TF-IDF (only IDF atm)
+#     kwargs: configurations for the torch DataLoader class
+# """
+# def get_dataloader(split, compression_words, tokenizer, **kwargs):
+#     dataset = CompressedDataset(get_dataset(split), compression_words)
+#     return DataLoader(dataset, **kwargs)
 
-"""
-Test Harness
-"""
-def test(n_iter):
-    TF_IDF = True
-    data_loader = get_dataloader(TF_IDF, shuffle=True, batch_size=1)
-    print("LEN TEST: \n", len(data_loader))
-    print("ITEM TEST: \n")
-    for i, data in enumerate(data_loader):
-        print(data)
-        if  i == n_iter: break
-    # iter test:
-    tr_it = iter(data_loader)
-    try:
-        data = next(tr_it)
-    except StopIteration:
-        tr_it = iter(train_dataloader)
-        data = next(tr_it)
+# """
+# Test Harness
+# """
+# def test(n_iter):
+#     TF_IDF = True
+#     data_loader = get_dataloader(TF_IDF, shuffle=True, batch_size=1)
+#     print("LEN TEST: \n", len(data_loader))
+#     print("ITEM TEST: \n")
+#     for i, data in enumerate(data_loader):
+#         print(data)
+#         if  i == n_iter: break
+#     # iter test:
+#     tr_it = iter(data_loader)
+#     try:
+#         data = next(tr_it)
+#     except StopIteration:
+#         tr_it = iter(train_dataloader)
+#         data = next(tr_it)
 
 
-if __name__ == "__main__":
-    test(6)
+# if __name__ == "__main__":
+#     test(6)
