@@ -32,18 +32,18 @@ Arguments:
     dataset: list of strings
     vocab_size: int, length of list
 """
-def preprocess_poesia(dataset, vocab_size=10000):
+def preprocess_poesia(dataset, vocab_size=100):
     split_txt = ' '.join(dataset).split()
     word2count = Counter(split_txt)
     total_chars = [(word, count * len(word)) for word, count in word2count.items()]
     top_compressions = sorted(total_chars, key=lambda x: x[1], reverse=True)[:vocab_size]
-    return sorted({word for word, _ in top_compressions})
+    return sorted({word for word, _ in top_compressions if len(word) > 1 and word != '[UNK]'})
 
 
 """
 pre-processing for TF-IDF
 """
-def preprocess_tf_idf(dataset, vocab_size=10000, factor_length=True): # tune threshold
+def preprocess_tf_idf(dataset, vocab_size=100, factor_length=True): # tune threshold
 
     # utilize TF (not doing so currently)
     # toks = text.split() # consider using BERT tokenizer (and just not tokenize punct)
