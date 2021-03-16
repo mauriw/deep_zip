@@ -73,7 +73,7 @@ def train(model, tokenizer, train_dset, val_dset, compression_ids, run_name, tra
         fig = px.line(history, x='Epoch', y=metric, color='Split')
         fig.update_xaxes(nticks=training_args['epochs'])
         fig.update_layout(title={
-            'text': f"{metric} Over Epoch",
+            'text': f"{metric} Over Epoch For {run_name}",
             'x': 0.46,
             'y': 0.95,
             'xanchor': 'center',
