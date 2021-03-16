@@ -74,37 +74,37 @@ def get_dataset(split):
         x = pkl.dump(clean, f)     
     return clean
 
-# """
-# Returns torch dataloader that for a dataset that
-# utilizes the specified compressor.
+"""
+Returns torch dataloader that for a dataset that
+utilizes the specified compressor.
 
-# Arguments:
-#     compressor: bool, True if using TF-IDF (only IDF atm)
-#     kwargs: configurations for the torch DataLoader class
-# """
-# def get_dataloader(split, compression_words, tokenizer, **kwargs):
-#     dataset = CompressedDataset(get_dataset(split), compression_words)
-#     return DataLoader(dataset, **kwargs)
+Arguments:
+    compressor: bool, True if using TF-IDF (only IDF atm)
+    kwargs: configurations for the torch DataLoader class
+"""
+def get_dataloader(split, compression_words, tokenizer, **kwargs):
+    dataset = CompressedDataset(get_dataset(split), compression_words)
+    return DataLoader(dataset, **kwargs)
 
-# """
-# Test Harness
-# """
-# def test(n_iter):
-#     TF_IDF = True
-#     data_loader = get_dataloader(TF_IDF, shuffle=True, batch_size=1)
-#     print("LEN TEST: \n", len(data_loader))
-#     print("ITEM TEST: \n")
-#     for i, data in enumerate(data_loader):
-#         print(data)
-#         if  i == n_iter: break
-#     # iter test:
-#     tr_it = iter(data_loader)
-#     try:
-#         data = next(tr_it)
-#     except StopIteration:
-#         tr_it = iter(train_dataloader)
-#         data = next(tr_it)
+"""
+Test Harness
+"""
+def test(n_iter):
+    TF_IDF = True
+    data_loader = get_dataloader(TF_IDF, shuffle=True, batch_size=1)
+    print("LEN TEST: \n", len(data_loader))
+    print("ITEM TEST: \n")
+    for i, data in enumerate(data_loader):
+        print(data)
+        if  i == n_iter: break
+    # iter test:
+    tr_it = iter(data_loader)
+    try:
+        data = next(tr_it)
+    except StopIteration:
+        tr_it = iter(train_dataloader)
+        data = next(tr_it)
 
 
-# if __name__ == "__main__":
-#     test(6)
+if __name__ == "__main__":
+    test(6)
