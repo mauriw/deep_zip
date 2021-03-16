@@ -66,8 +66,8 @@ def run_experiment(model, tokenizer):
     print(f"Corpus size: {total_original_len} characters, {num_overall} words")
 
 base_training_args = {
-    'epochs': 2,
-    'batch_size': 2,
+    'epochs': 3,
+    'batch_size': 32,
     'shuffle': True,
     'optimizer': torch.optim.Adam,
     'loss_fn': F.cross_entropy,
@@ -80,35 +80,34 @@ if __name__ == '__main__':
             os.mkdir(directory)
 
     encoder_name = 'bert-base-cased'
-    compression_name = 'poesia'
-    output_vocab_size = 25
+    for compression_name in ['poesia', 'tf-idf']:
+        for output_vocab_size in [300, 1000, 2000]:
+            encoder = BertModel.from_pretrained(encoder_name)
+            # TODO check if you can change tokenizer mask token
+            tokenizer = BertTokenizer.from_pretrained(encoder_name)
+            if compression_name == 'poesia':
+                compression_tokens = compressor.preprocess_poesia(data.get_dataset('train'), output_vocab_size)
+            elif compression_name == 'tf-idf':
+                compression_tokens = compressor.preprocess_tf_idf(data.get_dataset('train'), output_vocab_size)
+            print("Compression tokens:")
+            print(compression_tokens)
+            print('*' * 100)
 
-    encoder = BertModel.from_pretrained(encoder_name)
-    # TODO check if you can change tokenizer mask token
-    tokenizer = BertTokenizer.from_pretrained(encoder_name)
-    if compression_name == 'poesia':
-        compression_tokens = compressor.preprocess_poesia(data.get_dataset('train'), output_vocab_size)
-    elif compression_name == 'tf-idf':
-        compression_tokens = compressor.preprocess_tf_idf(data.get_dataset('train'), output_vocab_size)
-    print("Compression tokens:")
-    print(compression_tokens)
-    print('*' * 100)
+            tokenizer.add_tokens(compression_tokens)
+            compression_ids = torch.tensor(tokenizer.convert_tokens_to_ids(compression_tokens)).to(constants.DEVICE)
+            compression_id_to_idx = {t.item(): i for i, t in enumerate(compression_ids)}
+            model = models.BertFinetune(encoder, constants.PRETRAINED_BERT_OUTPUT_HIDDEN_SIZE, len(compression_tokens))
 
-    tokenizer.add_tokens(compression_tokens)
-    compression_ids = torch.tensor(tokenizer.convert_tokens_to_ids(compression_tokens)).to(constants.DEVICE)
-    compression_id_to_idx = {t.item(): i for i, t in enumerate(compression_ids)}
-    model = models.BertFinetune(encoder, constants.PRETRAINED_BERT_OUTPUT_HIDDEN_SIZE, len(compression_tokens))
+            train_dset = data.CompressedDataset(data.get_dataset('train'), tokenizer, compression_ids, compression_id_to_idx)
+            val_dset = data.CompressedDataset(data.get_dataset('val'), tokenizer, compression_ids, compression_id_to_idx)
+            test_dset = data.CompressedDataset(data.get_dataset('test'), tokenizer, compression_ids, compression_id_to_idx)
+            train_dataloader = torch.utils.data.DataLoader(train_dset, shuffle=base_training_args['shuffle'], batch_size=base_training_args['batch_size'])
+            val_dataloader = torch.utils.data.DataLoader(val_dset, shuffle=base_training_args['shuffle'], batch_size=base_training_args['batch_size'])
+            test_dataloader = torch.utils.data.DataLoader(test_dset, shuffle=False, batch_size=base_training_args['batch_size'])
 
-    train_dset = data.CompressedDataset(data.get_dataset('train')[:4], tokenizer, compression_ids, compression_id_to_idx)
-    val_dset = data.CompressedDataset(data.get_dataset('val')[:4], tokenizer, compression_ids, compression_id_to_idx)
-    test_dset = data.CompressedDataset(data.get_dataset('test')[:4], tokenizer, compression_ids, compression_id_to_idx)
-    train_dataloader = torch.utils.data.DataLoader(train_dset, shuffle=base_training_args['shuffle'], batch_size=base_training_args['batch_size'])
-    val_dataloader = torch.utils.data.DataLoader(val_dset, shuffle=base_training_args['shuffle'], batch_size=base_training_args['batch_size'])
-    test_dataloader = torch.utils.data.DataLoader(test_dset, shuffle=False, batch_size=base_training_args['batch_size'])
-
-    models.train(model, tokenizer, train_dataloader, val_dataloader, compression_ids,
-                 f'{encoder_name}_{compression_name}_{output_vocab_size}', base_training_args)
-    print('=' * 100)
-    models.eval(model, tokenizer, test_dataloader, compression_ids,
-                f'{encoder_name}_{compression_name}_{output_vocab_size}', base_training_args['loss_fn'])
-    print('*' * 100)
+            models.train(model, tokenizer, train_dataloader, val_dataloader, compression_ids,
+                        f'{encoder_name}_{compression_name}_{output_vocab_size}', base_training_args)
+            print('=' * 100)
+            models.eval(model, tokenizer, test_dataloader, compression_ids,
+                        f'{encoder_name}_{compression_name}_{output_vocab_size}', base_training_args['loss_fn'])
+            print('*' * 100)

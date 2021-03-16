@@ -38,7 +38,7 @@ Arguments:
 def preprocess_poesia(dataset, vocab_size=100):
     split_txt = ' '.join(dataset).split()
     word2count = Counter(split_txt)
-    total_chars = [(word, count * len(word)) for word, count in word2count.items() if len(word) > 1 and word != '[UNK]']
+    total_chars = [(word, count * len(word)) for word, count in word2count.items() if len(word) > 3 and word != '[UNK]']
     top_compressions = sorted(total_chars, key=lambda x: x[1], reverse=True)[:vocab_size]
     return sorted({word for word, _ in top_compressions})
 

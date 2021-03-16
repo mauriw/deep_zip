@@ -101,6 +101,7 @@ def run(model, tokenizer, dset, compression_ids, output_fname, loss_fn, train=Fa
     epoch_tot_total = 0
     for batch in tqdm(dset):
         model_inputs, true_tokens, mask_indices = batch
+        model_inputs['input_ids'][mask_indices] = tokenizer.mask_token_id
         if train:
             optimizer.zero_grad()
         preds = model(model_inputs)
@@ -127,15 +128,15 @@ def results(output_fname, input_tokens, y_logit, y_true, mask_indices, tokenizer
     pred_tokens[mask_indices] = compression_ids[F.softmax(y_logit[mask_indices], 1).argmax(dim=1)]
     y_true_tokens[mask_indices] = compression_ids[y_true[mask_indices]]
 
-    clean = lambda s: s.replace('[CLS]', '').replace('[SEP]', '').replace('[PAD]', '').strip()
+    clean = lambda s: s.replace(constants.MASK, constants.NEW_MASK).replace('[CLS]', '').replace('[SEP]', '').replace('[PAD]', '').strip()
 
-    with open(f'outputs/{output_fname}_masked.txt', 'w') as f:
+    with open(f'outputs/{output_fname}_masked.txt', 'a') as f:
         for input_token in input_tokens:
             f.write(f"{clean(tokenizer.decode(input_token))}\n\n")
-    with open(f'outputs/{output_fname}_preds.txt', 'w') as f:
+    with open(f'outputs/{output_fname}_preds.txt', 'a') as f:
         for pred in pred_tokens:
             f.write(f"{clean(tokenizer.decode(pred))}\n\n")
-    with open(f'outputs/{output_fname}_true.txt', 'w') as f:
+    with open(f'outputs/{output_fname}_true.txt', 'a') as f:
         for y_true in y_true_tokens:
             f.write(f"{clean(tokenizer.decode(y_true))}\n\n")
     return (torch.sum(pred_tokens[mask_indices] == y_true_tokens[mask_indices]).item(), mask_indices.count_nonzero(),

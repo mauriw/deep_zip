@@ -33,11 +33,11 @@ class CompressedDataset(Dataset):
         for i in range(compression['input_ids'].shape[-1]):
             if compression['input_ids'][0, i].item() in self.compression_ids:
                 true_tokens[i] = self.compression_id_to_idx[compression['input_ids'][0, i].item()]
-                compression['input_ids'][0, i] = self.tokenizer.mask_token_id
+                compression['input_ids'][0, i] = constants.NEW_MASK_ID
         compression['input_ids'] = compression['input_ids'].squeeze().to(constants.DEVICE)
         compression['token_type_ids'] = compression['token_type_ids'].squeeze().to(constants.DEVICE)
         compression['attention_mask'] = compression['attention_mask'].squeeze().to(constants.DEVICE)
-        mask_indices = compression['input_ids'] == self.tokenizer.mask_token_id
+        mask_indices = compression['input_ids'] == constants.NEW_MASK_ID
         return compression, true_tokens, mask_indices
 
 """
