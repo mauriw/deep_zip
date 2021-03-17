@@ -56,12 +56,12 @@ def preprocess_tf_idf(dataset, vocab_size=10000, threshold=0.1, factor_length=Tr
         toks = text.split()
         TF = Counter(toks)
         for i, tok in enumerate(toks):
-            score = float(1)/TF[tok] * float(1)/(IDF[tok]+0.01) * len(tok)
+            score = float(1)/TF[tok] * float(1)/(IDF[tok]+0.01) * float(1)/len(tok)
             if factor_length: score = score * len(tok)
             if tok in scores: score = min(score, scores[tok])
             scores[tok] = score
 
-    tfidf_pairs = [(word, count) for word, count in scores.items() if  len(word) != 1]
+    tfidf_pairs = [(word, count) for word, count in scores.items() if len(word) > 3 and word != '[UNK]']
     top_compressions = sorted(tfidf_pairs, key=lambda x: x[1], reverse=True)[-vocab_size:]# [:vocab_size] #[-vocab_size:]
     compression_words = {word for word, _ in top_compressions}
     return sorted(compression_words)
