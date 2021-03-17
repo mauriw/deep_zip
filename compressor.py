@@ -1,5 +1,6 @@
 import constants
 import numpy as np
+from pathlib import Path
 from collections import Counter, defaultdict
 import pickle as pkl
 import plotly.figure_factory as ff
@@ -71,7 +72,7 @@ Returns maps of IDF scores for every word in the wikitext dataset
 (generated using tf_idf_script.py)
 """
 def get_idf():
-    file = "inv_doc_freq_10000_123.p"
+    file = Path.cwd() / "inv_doc_freq_10000_123.p"
 
     if not os.path.isfile(file):
         print("Generating TF-IDF weights...one moment please.")
@@ -98,13 +99,13 @@ def test():
     for i,d in enumerate(ds):
         # if len(lens) == 20: break
         toks = d.split()
-        if len(toks) == 0 or (toks[0] is "=" and toks[1] is "="):
+        if len(toks) == 0 or (toks[0] == "=" and toks[1] == "="):
             pbar.update(1)
             continue
 
         lens.append(len(toks))
         comp = [word if word not in comp_toks else constants.MASK for word in toks]
-        n_masked = len([word for word in comp if word is constants.MASK])
+        n_masked = len([word for word in comp if word == constants.MASK])
         dist.append(n_masked/float(len(d)))
         if n_masked == 0: zero += 1
         if n_masked >= round(len(toks)*0.8): lots += 1
