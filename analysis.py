@@ -6,6 +6,10 @@ import constants
 import data
 import compressor
 
+import torch
+
+from transformers import BertTokenizer
+
 """
 Generates a histogram of word counts
 """
@@ -50,5 +54,53 @@ def compression_scores():
             print()
     print('Gzip / Original:', gzip_len / original_len)
 
+def accuracy(base_fname):
+    encoder_name = 'bert-base-cased'
+    for compression_name in ['poesia', 'tf-idf']:
+        for output_vocab_size in [300, 1000, 2000]:
+            tokenizer = BertTokenizer.from_pretrained(encoder_name)
+            if compression_name == 'poesia':
+                compression_tokens = compressor.preprocess_poesia(data.get_dataset('train'), output_vocab_size)
+                base_fname = f'outputs/{encoder_name}_{compression_name}_{output_vocab_size}_test'
+            elif compression_name == 'tf-idf':
+                compression_tokens = compressor.preprocess_tf_idf(data.get_dataset('train'), output_vocab_size)
+                base_fname = f'outputs/{encoder_name}_{compression_name}_{output_vocab_size}_LARGER_test'
+            tokenizer.add_tokens(compression_tokens)
+
+            with open(f'{base_fname}_masked.txt') as f:
+                masks = f.readlines()
+            with open(f'{base_fname}_preds.txt') as f:
+                preds = f.readlines()
+            with open(f'{base_fname}_true.txt') as f:
+                actuals = f.readlines()
+
+            num_correct_masked = 0
+            num_total_masked = 0
+            num_correct = 0
+            num_total = 0
+            for i in range(len(preds)):
+                masked, pred, actual = masks[i].replace('@', '[MASK]'), preds[i], actuals[i]
+                if len(masked.strip()) == 0:
+                    continue
+                masked_indices = tokenizer(masked, return_tensors='pt')['input_ids'].squeeze() == tokenizer.mask_token_id
+                pred_tokens = tokenizer(pred, return_tensors='pt', padding='max_length', max_length=masked_indices.numel())['input_ids'].squeeze()
+                actual_tokens = tokenizer(actual, return_tensors='pt', padding='max_length', max_length=masked_indices.numel())['input_ids'].squeeze()
+
+                if masked_indices.numel() < pred_tokens.numel():
+                    masked_indices = torch.cat((masked_indices, torch.full((pred_tokens.numel() - masked_indices.numel(),), False)))
+
+                num_correct_masked += torch.sum(pred_tokens[masked_indices] == actual_tokens[masked_indices]).item()
+                num_total_masked += masked_indices.count_nonzero().item()
+                num_correct += torch.sum(pred_tokens == actual_tokens).item()
+                num_total += pred_tokens.numel()
+            print(f"Compression name: {compression_name}")
+            print(f"Vocab size: {output_vocab_size}")
+            print()
+            print(f"Masked accuracy: {num_correct_masked / num_total_masked}")
+            print(f"Overall accuracy: {num_correct / num_total}")
+            print('*' * 100)
+            print()
+
 if __name__ == '__main__':
     compression_scores()
+    accuracy('outputs/bert-base-cased_poesia_1000_test')
