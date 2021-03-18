@@ -72,7 +72,7 @@ Returns maps of IDF scores for every word in the wikitext dataset
 (generated using tf_idf_script.py)
 """
 def get_idf():
-    file = Path.cwd() / "inv_doc_freq_10000_123.p"
+    file = Path.cwd() / "inv_doc_freq_10000_123.p" #alternatively 1000?
 
     if not os.path.isfile(file):
         print("Generating TF-IDF weights...one moment please.")

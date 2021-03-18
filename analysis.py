@@ -21,16 +21,17 @@ def histogram(dataset, num_words):
 Prints compression scores
 """
 def compression_scores():
-    dataset = data.get_dataset('test')
+    train_dataset = data.get_dataset('train')
+    test_dataset = data.get_dataset('test')
     for compression_name in ['tf-idf', 'poesia']:
         for output_vocab_size in [300, 1000, 2000]:
             if compression_name == 'poesia':
-                compression_tokens = compressor.preprocess_poesia(dataset, output_vocab_size)
+                compression_tokens = compressor.preprocess_poesia(train_dataset, output_vocab_size)
             elif compression_name == 'tf-idf':
-                compression_tokens = compressor.preprocess_tf_idf(dataset, output_vocab_size)
+                compression_tokens = compressor.preprocess_tf_idf(train_dataset, output_vocab_size)
             
             original_len, compressed_len, gzip_len, gzip_compressed_len = 0, 0, 0, 0
-            for sample in dataset:
+            for sample in test_dataset:
                 original_len += len(sample.encode('utf8'))
                 gzip_len += len(gzip.compress(sample.encode('utf8')))
 
